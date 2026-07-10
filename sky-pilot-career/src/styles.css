@@ -55,7 +55,8 @@ button { font: inherit; }
 h1 { margin: 0 0 12px; font-size: clamp(36px, 6vw, 78px); line-height: .92; letter-spacing: -.06em; }
 .lead { color: #cfddf0; line-height: 1.55; font-size: 16px; margin: 0 0 18px; }
 .hint { color: var(--muted); line-height: 1.45; font-size: 13px; margin: 18px 0 0; }
-.menu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 22px 0; }
+.menu-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 22px 0; }
+.menu-grid:has(> div:nth-child(3):last-child) { grid-template-columns: repeat(3, 1fr); }
 .menu-grid > div {
   border: 1px solid rgba(255,255,255,.10);
   border-radius: 18px;
@@ -81,6 +82,43 @@ button.ghost {
   color: #fff;
   border: 1px solid rgba(255,255,255,.14);
 }
+
+/* ===== Start menu views ===== */
+h2 { margin: 0 0 14px; font-size: clamp(26px, 4vw, 42px); letter-spacing: -.04em; }
+.menu-view.hidden { display: none; }
+.menu-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.menu-buttons button { margin-right: 0; }
+.back-btn { margin-top: 16px; }
+
+.mission-card {
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 20px;
+  background: rgba(255,255,255,.04);
+  padding: 18px;
+}
+.mission-card p { color: #cfddf0; font-size: 14px; line-height: 1.5; margin: 10px 0 0; }
+.mission-card .menu-grid { margin: 16px 0; }
+.mission-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.mission-head strong { font-size: 16px; }
+.mission-reward { color: var(--hud); font-size: 12px; font-weight: 700; letter-spacing: .04em; }
+
+.controls-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; font-size: 14px; color: #dbe8f7; line-height: 1.6; }
+.controls-list .key, #help .key { color: #ffffff; font-weight: 800; }
+
+.settings-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 14px; padding: 12px 0;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  font-size: 15px;
+}
+.settings-row select {
+  font: inherit; color: var(--text);
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 10px; padding: 8px 12px;
+}
+.settings-row select option { color: #111827; }
+.settings-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: #71ff9b; }
 
 .hud {
   position: fixed;
@@ -178,5 +216,6 @@ button.ghost {
   #leftPanel { width: 210px; }
   #bottomPanel { grid-template-columns: repeat(4, 1fr); }
   #help { display:none; }
-  .menu-grid, .score-panel { grid-template-columns: 1fr; }
+  .menu-grid, .score-panel { grid-template-columns: repeat(2, 1fr); }
+  .controls-list { grid-template-columns: 1fr; }
 }

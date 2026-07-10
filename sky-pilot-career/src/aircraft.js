@@ -13,6 +13,13 @@ function addAircraftLighting(aircraft) {
   lTail.position.set(0, 0.36, 4.45);
   aircraft.add(lRed, lGreen, lTail);
 
+  // Anti-collision strobe on the vertical tail — blinked in updateAircraftVisual.
+  const strobeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 4 });
+  const strobe = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 8), strobeMat);
+  strobe.position.set(0, 1.85, 3.92);
+  aircraft.add(strobe);
+  aircraft.userData.strobe = strobe;
+
   const landing = new THREE.SpotLight(0xfff7df, 18, 170, 0.18, 0.4, 1.2);
   landing.position.set(0, -0.18, -3.55);
   landing.target.position.set(0, -8, -72);
@@ -102,9 +109,14 @@ export function updateAircraftVisual(aircraft, sim, dt) {
   aircraft.position.copy(sim.position);
   aircraft.rotation.set(sim.pitch, sim.yaw, sim.roll, 'YXZ');
   if (aircraft.userData.prop) {
-    aircraft.userData.prop.rotation.z += dt * (18 + sim.throttle * 220);
+    aircraft.userData.prop.rotation.z += dt * (18 + sim.rpm * 240);
   }
   if (aircraft.userData.wheels) {
     for (const wheel of aircraft.userData.wheels) wheel.visible = sim.gearDown;
+  }
+  if (aircraft.userData.strobe) {
+    // Double-flash strobe pattern, ~1 s period.
+    const t = performance.now() % 1000;
+    aircraft.userData.strobe.visible = t < 60 || (t > 140 && t < 200);
   }
 }

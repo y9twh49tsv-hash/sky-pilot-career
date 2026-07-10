@@ -80,7 +80,7 @@ export function checkpointDistanceNm(sim) {
 }
 
 export function objectiveText(sim) {
-  if (!sim.missionMode) return 'Free Flight';
+  if (!sim.missionMode) return 'Erkunde die Insel — R für Neustart';
   const cp = currentCheckpoint(sim);
   if (!cp) return 'Mission complete';
   return cp.label;

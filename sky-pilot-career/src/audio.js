@@ -1,6 +1,12 @@
+/**
+ * Procedural placeholder audio built on WebAudio oscillators — no asset files.
+ * Engine pitch/volume follows RPM, wind follows airspeed, plus one-shot beeps
+ * for stall, gear, flaps, checkpoints, touchdown and crash.
+ */
 export class GameAudio {
   constructor() {
     this.ctx = null;
+    this.master = null;
     this.engineOsc = null;
     this.engineGain = null;
     this.windOsc = null;
@@ -8,6 +14,7 @@ export class GameAudio {
     this.stallOsc = null;
     this.stallGain = null;
     this.stallActive = false;
+    this.muted = false;
   }
 
   async unlock() {
@@ -19,36 +26,48 @@ export class GameAudio {
     this.setupLoops();
   }
 
+  setMuted(muted) {
+    this.muted = muted;
+    if (this.master) {
+      this.master.gain.setTargetAtTime(muted ? 0 : 1, this.ctx.currentTime, 0.05);
+    }
+  }
+
   setupLoops() {
     const ctx = this.ctx;
+    this.master = ctx.createGain();
+    this.master.gain.value = this.muted ? 0 : 1;
+    this.master.connect(ctx.destination);
+
     this.engineOsc = ctx.createOscillator();
     this.engineOsc.type = 'sawtooth';
     this.engineGain = ctx.createGain();
     this.engineGain.gain.value = 0.02;
-    this.engineOsc.connect(this.engineGain).connect(ctx.destination);
+    this.engineOsc.connect(this.engineGain).connect(this.master);
     this.engineOsc.start();
 
     this.windOsc = ctx.createOscillator();
     this.windOsc.type = 'triangle';
     this.windGain = ctx.createGain();
     this.windGain.gain.value = 0.0;
-    this.windOsc.connect(this.windGain).connect(ctx.destination);
+    this.windOsc.connect(this.windGain).connect(this.master);
     this.windOsc.start();
 
     this.stallOsc = ctx.createOscillator();
     this.stallOsc.type = 'square';
     this.stallGain = ctx.createGain();
     this.stallGain.gain.value = 0.0;
-    this.stallOsc.connect(this.stallGain).connect(ctx.destination);
+    this.stallOsc.connect(this.stallGain).connect(this.master);
     this.stallOsc.frequency.value = 820;
     this.stallOsc.start();
   }
 
-  engine(throttle, speedKt) {
+  /** rpm is normalized engine power 0..1 (lags throttle via spool). */
+  engine(rpm, speedKt) {
     if (!this.ctx || !this.engineOsc) return;
     const t = this.ctx.currentTime;
-    this.engineOsc.frequency.setTargetAtTime(55 + throttle * 145, t, 0.05);
-    this.engineGain.gain.setTargetAtTime(0.015 + throttle * 0.065, t, 0.04);
+    this.engineOsc.frequency.setTargetAtTime(55 + rpm * 145, t, 0.05);
+    this.engineGain.gain.setTargetAtTime(0.015 + rpm * 0.065, t, 0.04);
     this.windOsc.frequency.setTargetAtTime(120 + speedKt * 2.1, t, 0.06);
     this.windGain.gain.setTargetAtTime(Math.min(0.04, speedKt / 7000), t, 0.08);
   }
@@ -66,7 +85,7 @@ export class GameAudio {
     osc.type = 'sine';
     osc.frequency.value = freq;
     amp.gain.value = gain;
-    osc.connect(amp).connect(this.ctx.destination);
+    osc.connect(amp).connect(this.master);
     osc.start();
     amp.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
     osc.stop(this.ctx.currentTime + duration + 0.02);

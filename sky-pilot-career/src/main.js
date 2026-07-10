@@ -12,9 +12,7 @@ import { registerMissionResult } from './storage.js';
 
 const canvas = document.getElementById('sim');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.4));
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -28,7 +26,7 @@ const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerH
 const sun = new THREE.DirectionalLight(0xfff5dc, 3.2);
 sun.position.set(-950, 1600, -900);
 sun.castShadow = true;
-sun.shadow.mapSize.set(4096, 4096);
+sun.shadow.mapSize.set(2048, 2048);
 sun.shadow.camera.left = -900;
 sun.shadow.camera.right = 900;
 sun.shadow.camera.top = 900;
@@ -38,7 +36,7 @@ sun.shadow.camera.far = 4200;
 scene.add(sun);
 scene.add(new THREE.HemisphereLight(0xbddfff, 0x536341, 1.25));
 
-createWorld(scene);
+const world = createWorld(scene);
 const aircraft = createAircraftModel();
 scene.add(aircraft);
 
@@ -57,6 +55,22 @@ const cameraRig = new CameraRig(camera);
 const ui = new GameUI();
 const audio = new GameAudio();
 
+// Graphics quality: pixel ratio + shadow toggle. Applied on load and when
+// changed in the settings menu (shadow toggle needs materials refreshed).
+function applySettings(settings) {
+  const ratios = { low: 1, medium: 1.5, high: Math.min(window.devicePixelRatio, 2.4) };
+  renderer.setPixelRatio(ratios[settings.quality] ?? ratios.high);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  const shadows = settings.quality !== 'low';
+  if (renderer.shadowMap.enabled !== shadows) {
+    renderer.shadowMap.enabled = shadows;
+    scene.traverse((obj) => {
+      if (obj.material) obj.material.needsUpdate = true;
+    });
+  }
+  audio.setMuted(!settings.sound);
+}
+
 function placeCheckpointVisual() {
   const cp = currentCheckpoint(sim);
   checkpointGroup.visible = Boolean(cp);
@@ -67,10 +81,11 @@ function placeCheckpointVisual() {
 
 async function startGame(missionMode) {
   await audio.unlock();
+  audio.setMuted(!ui.settings.sound);
   resetSimState(sim, { missionMode });
   aircraft.visible = true;
   cameraRig.mode = 0;
-  cameraRig.position.copy(sim.position).add(new THREE.Vector3(0, 10, 48));
+  cameraRig.position.copy(sim.position).add(new THREE.Vector3(0, 6, 20));
   cameraRig.look.copy(sim.position);
   ui.showGame();
   placeCheckpointVisual();
@@ -103,8 +118,10 @@ ui.bind({
   onMissionStart: () => startGame(true),
   onFreeFlight: () => startGame(false),
   onRestart: restartCurrent,
-  onBackToMenu: backToMenu
+  onBackToMenu: backToMenu,
+  onSettingsChange: applySettings
 });
+applySettings(ui.settings);
 ui.showMenu();
 
 let last = performance.now();
@@ -126,6 +143,9 @@ function animate(now) {
   if (missionEvent?.type === 'complete') handleMissionComplete(missionEvent.result);
 
   checkpointRing.rotation.z += dt * 1.6;
+  if (world.userData.beacon) {
+    world.userData.beacon.material.emissiveIntensity = 1 + Math.max(0, Math.sin(now * 0.004)) * 3;
+  }
   updateAircraftVisual(aircraft, sim, dt);
   cameraRig.update(sim, input, dt);
   ui.updateHud(sim, cameraRig, dt);

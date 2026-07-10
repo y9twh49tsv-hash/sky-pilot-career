@@ -6,12 +6,15 @@ Der Prototyp ist aus der ursprünglichen Einzel-HTML-Demo zu einer echten Projek
 
 ## Features
 
-- 3D-Flugzeug mit Tail-Chase-, Cockpit-, Tower-, Wing- und Free-Look-Kamera
+- Startmenü mit Career Mode, Free Flight, Controls und Settings (Grafikqualität, Sound, Hilfe-Overlay — automatisch gespeichert)
+- 3D-Flugzeug mit Tail-Chase-, Cockpit-, Wing-, Tower- und Free-Look-Kamera (Wechsel mit `C`, Tail Chase ist Standard)
 - prozedurales Terrain mit Runway, Taxiway, Apron, Tower, Hangar, Stadt, See, Straßen, Bäumen und Wolken
 - vereinfachte, aber spielbare Flugphysik:
   - Lift / Drag / Thrust / Gravity
   - Angle of Attack
-  - Stall
+  - Triebwerks-Spool (RPM folgt dem Schubhebel verzögert)
+  - Propeller-Wirkungsgrad (Topspeed ~320 kt, Overspeed-Crash bei 420 kt)
+  - Stall-Warnung vor dem Strömungsabriss
   - Overspeed
   - Flaps
   - Gear Drag

@@ -1,13 +1,15 @@
 import { DEG, FT, MS_TO_KT, NM } from './constants.js';
 import { clamp, headingDeg, formatNumber, lerp } from './utils.js';
 import { checkpointDistanceNm, currentCheckpoint, objectiveText } from './missions.js';
-import { loadSave } from './storage.js';
+import { loadSave, loadSettings, saveSettings, pilotLevel } from './storage.js';
 
 const el = (id) => document.getElementById(id);
+const MENU_VIEWS = ['menuMain', 'menuCareer', 'menuControls', 'menuSettings'];
 
 export class GameUI {
   constructor() {
     this.fpsSmooth = 60;
+    this.settings = loadSettings();
     this.elements = {
       menu: el('menu'),
       hud: el('hud'),
@@ -19,24 +21,59 @@ export class GameUI {
     };
   }
 
-  bind({ onMissionStart, onFreeFlight, onRestart, onBackToMenu }) {
+  bind({ onMissionStart, onFreeFlight, onRestart, onBackToMenu, onSettingsChange }) {
+    this.onSettingsChange = onSettingsChange;
+
+    el('btnCareer').addEventListener('click', () => this.showMenuView('menuCareer'));
+    el('btnControls').addEventListener('click', () => this.showMenuView('menuControls'));
+    el('btnSettings').addEventListener('click', () => this.showMenuView('menuSettings'));
+    for (const btn of document.querySelectorAll('[data-back]')) {
+      btn.addEventListener('click', () => this.showMenuView('menuMain'));
+    }
+
     el('startMission').addEventListener('click', onMissionStart);
-    el('freeFlight').addEventListener('click', onFreeFlight);
+    el('btnFreeFlight').addEventListener('click', onFreeFlight);
     el('restart').addEventListener('click', onRestart);
     el('backToMenu').addEventListener('click', onBackToMenu);
     el('hideHelp').addEventListener('click', () => el('help').style.display = 'none');
+
+    // Settings controls: reflect stored values, persist and apply on change.
+    el('setQuality').value = this.settings.quality;
+    el('setSound').checked = this.settings.sound;
+    el('setHelp').checked = this.settings.showHelp;
+    const applySettings = () => {
+      this.settings = {
+        quality: el('setQuality').value,
+        sound: el('setSound').checked,
+        showHelp: el('setHelp').checked
+      };
+      saveSettings(this.settings);
+      this.onSettingsChange?.(this.settings);
+    };
+    el('setQuality').addEventListener('change', applySettings);
+    el('setSound').addEventListener('change', applySettings);
+    el('setHelp').addEventListener('change', applySettings);
+  }
+
+  showMenuView(viewId) {
+    for (const id of MENU_VIEWS) el(id).classList.toggle('hidden', id !== viewId);
   }
 
   refreshMenuStats() {
     const save = loadSave();
     el('bestScore').textContent = save.bestScore;
-    el('bestLanding').textContent = save.bestLanding === null ? '—' : `${save.bestLanding} fpm`;
+    el('careerBest').textContent = save.bestScore;
+    el('careerLanding').textContent = save.bestLanding === null ? '—' : `${save.bestLanding} fpm`;
     el('missionsDone').textContent = save.missionsDone;
+    el('pilotXp').textContent = formatNumber(save.xp);
+    el('pilotLevel').textContent = pilotLevel(save.xp);
+    el('menuMoney').textContent = formatNumber(save.money);
     el('money').textContent = formatNumber(save.money);
   }
 
   showMenu() {
     this.refreshMenuStats();
+    this.showMenuView('menuMain');
     this.elements.menu.classList.add('visible');
     this.elements.hud.classList.add('hidden');
     this.elements.message.classList.remove('visible');
@@ -46,6 +83,7 @@ export class GameUI {
     this.elements.menu.classList.remove('visible');
     this.elements.message.classList.remove('visible');
     this.elements.hud.classList.remove('hidden');
+    el('help').style.display = this.settings.showHelp ? '' : 'none';
   }
 
   showCrash(reason) {
@@ -82,9 +120,9 @@ export class GameUI {
     el('hdg').textContent = headingDeg(sim.yaw);
     el('pitch').textContent = Math.round(sim.pitch / DEG);
     el('bank').textContent = Math.round(sim.roll / DEG);
-    el('rpm').textContent = Math.round(820 + sim.throttle * 2650);
+    el('rpm').textContent = Math.round(820 + sim.rpm * 2650);
     el('thr').textContent = Math.round(sim.throttle * 100);
-    el('fuelFlow').textContent = (1.4 + sim.throttle * 24.0).toFixed(1);
+    el('fuelFlow').textContent = (1.4 + sim.rpm * 24.0).toFixed(1);
     el('flaps').textContent = sim.flaps;
     el('gear').textContent = sim.gearDown ? 'DOWN' : 'UP';
     el('brakes').textContent = sim.brakes ? 'ON' : 'OFF';
@@ -110,9 +148,11 @@ export class GameUI {
     const warnings = [];
     if (sim.paused) warnings.push('PAUSED');
     if (sim.stall) warnings.push('STALL');
-    if (speedKt > 310) warnings.push('OVERSPEED');
+    else if (sim.stallWarn) warnings.push('STALL WARNING');
+    if (sim.overspeedWarn) warnings.push('OVERSPEED');
     if (!sim.gearDown && altFt < 450 && speedKt < 115 && !sim.onGround) warnings.push('GEAR');
-    if (sim.fuel < 0.10) warnings.push('LOW FUEL');
+    if (sim.fuel <= 0) warnings.push('FUEL EMPTY');
+    else if (sim.fuel < 0.10) warnings.push('LOW FUEL');
     if (sim.onGround && sim.brakes && sim.throttle > 0.55) warnings.push('BRAKES');
     el('warnings').innerHTML = warnings.map(w => `<div class="warning-pill">${w}</div>`).join('');
 

@@ -67,8 +67,10 @@ function makeSkyDome(world) {
   canvas.height = 512;
   const ctx = canvas.getContext('2d');
   const grad = ctx.createLinearGradient(0, 0, 0, 512);
-  grad.addColorStop(0, '#1359b5');
-  grad.addColorStop(0.42, '#8ac8ff');
+  grad.addColorStop(0, '#0b3f96');
+  grad.addColorStop(0.28, '#2f7ad1');
+  grad.addColorStop(0.52, '#8ac8ff');
+  grad.addColorStop(0.78, '#cfe6f7');
   grad.addColorStop(1, '#f8e2bc');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 32, 512);
@@ -76,6 +78,50 @@ function makeSkyDome(world) {
   const mat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide, depthWrite: false });
   const dome = new THREE.Mesh(new THREE.SphereGeometry(10500, 48, 24), mat);
   world.add(dome);
+
+  // Visible sun disc with a soft glow, placed toward the directional light.
+  const sunCanvas = document.createElement('canvas');
+  sunCanvas.width = 128;
+  sunCanvas.height = 128;
+  const sctx = sunCanvas.getContext('2d');
+  const sunGrad = sctx.createRadialGradient(64, 64, 6, 64, 64, 64);
+  sunGrad.addColorStop(0, 'rgba(255,252,235,1)');
+  sunGrad.addColorStop(0.25, 'rgba(255,244,200,0.95)');
+  sunGrad.addColorStop(0.6, 'rgba(255,228,150,0.28)');
+  sunGrad.addColorStop(1, 'rgba(255,228,150,0)');
+  sctx.fillStyle = sunGrad;
+  sctx.fillRect(0, 0, 128, 128);
+  const sun = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: new THREE.CanvasTexture(sunCanvas),
+    transparent: true,
+    depthWrite: false,
+    fog: false
+  }));
+  sun.position.set(-4600, 7600, -4400);
+  sun.scale.setScalar(2600);
+  world.add(sun);
+}
+
+// Painted runway designator ("27" / "09") lying flat on the runway.
+function addRunwayNumber(world, text, z, flip) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#f4f7fa';
+  ctx.font = '900 150px Arial, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 64, 128);
+  const tex = new THREE.CanvasTexture(canvas);
+  const mesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(26, 52),
+    new THREE.MeshBasicMaterial({ map: tex, transparent: true })
+  );
+  mesh.rotation.x = -Math.PI / 2;
+  if (flip) mesh.rotation.z = Math.PI;
+  mesh.position.set(0, 0.95, z);
+  world.add(mesh);
 }
 
 function makeAirport(world) {
@@ -115,6 +161,28 @@ function makeAirport(world) {
       world.add(l);
     }
   }
+
+  // Runway designators: 27 faces traffic landing toward -z, 09 the reverse.
+  addRunwayNumber(world, '27', 1040, false);
+  addRunwayNumber(world, '09', -1040, true);
+
+  // PAPI (2 red / 2 white) beside the touchdown zone of runway 27.
+  const papiWhite = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 2.4 });
+  const papiRed = new THREE.MeshStandardMaterial({ color: 0xff2020, emissive: 0xff0000, emissiveIntensity: 2.4 });
+  for (let i = 0; i < 4; i++) {
+    const l = new THREE.Mesh(lightGeo, i < 2 ? papiWhite : papiRed);
+    l.position.set(-70 - i * 10, 2.6, 850);
+    world.add(l);
+  }
+
+  // Rotating airport beacon on top of the tower — pulsed from the main loop.
+  const beacon = new THREE.Mesh(
+    new THREE.SphereGeometry(3.4, 14, 10),
+    new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x66ff88, emissiveIntensity: 2.5 })
+  );
+  beacon.position.set(245, 136, -880);
+  world.add(beacon);
+  return beacon;
 }
 
 function makeClouds(world) {
@@ -206,9 +274,10 @@ export function createWorld(scene) {
   scene.add(world);
   makeSkyDome(world);
   makeTerrain(world);
-  makeAirport(world);
+  const beacon = makeAirport(world);
   makeWaterAndRoads(world);
   makeTreesAndCity(world);
   makeClouds(world);
+  world.userData.beacon = beacon;
   return world;
 }

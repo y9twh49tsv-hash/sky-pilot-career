@@ -11,22 +11,98 @@
 <body>
   <canvas id="sim"></canvas>
 
+  <!-- ===== Start menu ===== -->
   <div id="menu" class="overlay visible">
     <div class="menu-card">
-      <p class="eyebrow">Prototype V3 · GitHub Ready</p>
-      <h1>Sky Pilot Career</h1>
-      <p class="lead">Starte, fliege durch die Checkpoints und lande wieder sauber auf Runway 27. Je weicher und präziser die Landung, desto höher dein Score.</p>
-      <div class="menu-grid">
-        <div><span id="bestScore">0</span><small>Best Score</small></div>
-        <div><span id="bestLanding">—</span><small>Beste Landung</small></div>
-        <div><span id="missionsDone">0</span><small>Missionen</small></div>
+
+      <!-- Main view -->
+      <div id="menuMain" class="menu-view">
+        <p class="eyebrow">Browser Flight Simulator</p>
+        <h1>Sky Pilot Career</h1>
+        <p class="lead">Steig ins Cockpit: Karriere-Missionen fliegen, XP und Geld verdienen, sauber landen. Oder einfach frei über die Insel fliegen.</p>
+        <div class="menu-grid">
+          <div><span id="pilotLevel">1</span><small>Level</small></div>
+          <div><span id="pilotXp">0</span><small>XP</small></div>
+          <div><span id="menuMoney">0</span><small>€ Geld</small></div>
+          <div><span id="bestScore">0</span><small>Best Score</small></div>
+        </div>
+        <div class="menu-buttons">
+          <button id="btnCareer">Career Mode</button>
+          <button id="btnFreeFlight" class="ghost">Free Flight</button>
+          <button id="btnControls" class="ghost">Controls</button>
+          <button id="btnSettings" class="ghost">Settings</button>
+        </div>
       </div>
-      <button id="startMission">Mission starten</button>
-      <button id="freeFlight" class="ghost">Free Flight</button>
-      <p class="hint">Tipp: Zum Abheben ab ca. 68 kt leicht ziehen. Endanflug 65–80 kt, Flaps 20–30°, Fahrwerk unten.</p>
+
+      <!-- Career view -->
+      <div id="menuCareer" class="menu-view hidden">
+        <p class="eyebrow">Career Mode</p>
+        <h2>Missionen</h2>
+        <div class="mission-card">
+          <div class="mission-head">
+            <strong>Mission 1 · Runway 27 Training Circuit</strong>
+            <span class="mission-reward">bis zu €2.550 · 320 XP</span>
+          </div>
+          <p>Starte von Runway 27, fliege die Platzrunde durch alle Checkpoints und lande wieder. Je weicher, langsamer und mittiger die Landung, desto höher der Score.</p>
+          <div class="menu-grid">
+            <div><span id="careerBest">0</span><small>Best Score</small></div>
+            <div><span id="careerLanding">—</span><small>Beste Landung</small></div>
+            <div><span id="missionsDone">0</span><small>Abgeschlossen</small></div>
+          </div>
+          <button id="startMission">Mission starten</button>
+        </div>
+        <button class="ghost back-btn" data-back>Zurück</button>
+      </div>
+
+      <!-- Controls view -->
+      <div id="menuControls" class="menu-view hidden">
+        <p class="eyebrow">Controls</p>
+        <h2>Steuerung</h2>
+        <div class="controls-list">
+          <div><span class="key">W / S</span> Pitch (drücken / ziehen)</div>
+          <div><span class="key">A / D</span> Roll (Querruder)</div>
+          <div><span class="key">Q / E</span> Rudder (Seitenruder)</div>
+          <div><span class="key">Shift / Ctrl</span> Throttle hoch / runter</div>
+          <div><span class="key">F / V</span> Flaps setzen / einfahren</div>
+          <div><span class="key">G</span> Fahrwerk ein-/ausfahren</div>
+          <div><span class="key">B</span> Radbremsen</div>
+          <div><span class="key">T / Y</span> Trimmung</div>
+          <div><span class="key">C</span> Kamera wechseln (Chase → Cockpit → Wing → Tower → Frei)</div>
+          <div><span class="key">Pfeiltasten</span> Freie Kamera drehen</div>
+          <div><span class="key">P</span> Pause · <span class="key">R</span> Neustart</div>
+        </div>
+        <p class="hint">Tipp: Abheben ab ca. 68 kt. Endanflug 65–80 kt, Flaps 20–30°, Fahrwerk unten, Sinkrate unter 500 ft/min.</p>
+        <button class="ghost back-btn" data-back>Zurück</button>
+      </div>
+
+      <!-- Settings view -->
+      <div id="menuSettings" class="menu-view hidden">
+        <p class="eyebrow">Settings</p>
+        <h2>Einstellungen</h2>
+        <div class="settings-row">
+          <label for="setQuality">Grafikqualität</label>
+          <select id="setQuality">
+            <option value="low">Niedrig (schnell)</option>
+            <option value="medium">Mittel</option>
+            <option value="high" selected>Hoch</option>
+          </select>
+        </div>
+        <div class="settings-row">
+          <label for="setSound">Sound</label>
+          <input type="checkbox" id="setSound" checked />
+        </div>
+        <div class="settings-row">
+          <label for="setHelp">Hilfe-Overlay im Spiel</label>
+          <input type="checkbox" id="setHelp" checked />
+        </div>
+        <p class="hint">Einstellungen werden automatisch gespeichert.</p>
+        <button class="ghost back-btn" data-back>Zurück</button>
+      </div>
+
     </div>
   </div>
 
+  <!-- ===== In-game HUD ===== -->
   <div id="hud" class="hud hidden">
     <div class="topbar">
       <span class="status-dot"></span>
@@ -84,6 +160,7 @@
     </aside>
   </div>
 
+  <!-- ===== Result / crash overlay ===== -->
   <div id="message" class="overlay">
     <div class="menu-card result-card">
       <p class="eyebrow" id="resultEyebrow">Mission beendet</p>
