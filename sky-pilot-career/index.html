@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Sky Pilot Career - realistischer 3D-Flugsimulator als Browser-Spiel." />
+  <title>Sky Pilot Career</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/src/styles.css" />
+</head>
+<body>
+  <canvas id="sim"></canvas>
+
+  <div id="menu" class="overlay visible">
+    <div class="menu-card">
+      <p class="eyebrow">Prototype V3 · GitHub Ready</p>
+      <h1>Sky Pilot Career</h1>
+      <p class="lead">Starte, fliege durch die Checkpoints und lande wieder sauber auf Runway 27. Je weicher und präziser die Landung, desto höher dein Score.</p>
+      <div class="menu-grid">
+        <div><span id="bestScore">0</span><small>Best Score</small></div>
+        <div><span id="bestLanding">—</span><small>Beste Landung</small></div>
+        <div><span id="missionsDone">0</span><small>Missionen</small></div>
+      </div>
+      <button id="startMission">Mission starten</button>
+      <button id="freeFlight" class="ghost">Free Flight</button>
+      <p class="hint">Tipp: Zum Abheben ab ca. 68 kt leicht ziehen. Endanflug 65–80 kt, Flaps 20–30°, Fahrwerk unten.</p>
+    </div>
+  </div>
+
+  <div id="hud" class="hud hidden">
+    <div class="topbar">
+      <span class="status-dot"></span>
+      <span id="modeLabel">MISSION</span>
+      <span id="objective">Take off from Runway 27</span>
+    </div>
+
+    <div id="warnings"></div>
+    <div id="attitude"><div id="horizonLine"></div></div>
+    <div id="reticle"><div class="reticle-dot"></div></div>
+    <div id="checkpointMarker">⬡</div>
+
+    <section id="leftPanel" class="panel">
+      <div class="label">Airspeed</div><div class="readout"><span id="ias">0</span> kt</div>
+      <div class="meter"><i id="speedMeter"></i></div>
+      <br>
+      <div class="label">Altitude MSL</div><div class="readout"><span id="alt">0</span> ft</div>
+      <div class="small">Vertical speed: <span id="vs">0</span> ft/min</div>
+      <br>
+      <div class="label">Heading</div><div class="readout"><span id="hdg">000</span>°</div>
+      <div class="small">Pitch <span id="pitch">0</span>° · Bank <span id="bank">0</span>°</div>
+    </section>
+
+    <section id="rightPanel" class="panel">
+      <div class="label">Engine</div><div class="readout"><span id="rpm">900</span> RPM</div>
+      <div class="small">Throttle: <span id="thr">0</span>% · Fuel flow: <span id="fuelFlow">0.0</span> gal/h</div>
+      <div class="meter"><i id="thrMeter"></i></div>
+      <br>
+      <div class="label">Flight Config</div>
+      <div class="small">Flaps: <span id="flaps">0</span>° · Gear: <span id="gear">DOWN</span> · Brakes: <span id="brakes">OFF</span></div>
+      <div class="small">AoA: <span id="aoa">0</span>° · G-Load: <span id="gload">1.0</span>g</div>
+      <br>
+      <div class="label">Navigation</div>
+      <div class="small">Checkpoint: <span id="checkpointDist">0.0</span> NM · Runway: <span id="rwyDist">0.0</span> NM</div>
+      <div class="small">Camera: <span id="camMode">Tail Chase</span></div>
+    </section>
+
+    <section id="bottomPanel" class="panel">
+      <div><div class="label">Lift</div><div class="readout"><span id="lift">0</span>%</div></div>
+      <div><div class="label">Drag</div><div class="readout"><span id="drag">0</span>%</div></div>
+      <div><div class="label">Money</div><div class="readout">€<span id="money">0</span></div></div>
+      <div><div class="label">Wind</div><div class="readout"><span id="wind">0</span> kt</div></div>
+      <div><div class="label">Trim</div><div class="readout"><span id="trim">0</span>°</div></div>
+      <div><div class="label">Fuel</div><div class="readout"><span id="fuelQty">100</span>%</div></div>
+      <div><div class="label">State</div><div class="readout"><span id="state">READY</span></div></div>
+      <div><div class="label">FPS</div><div class="readout"><span id="fps">60</span></div></div>
+    </section>
+
+    <aside id="help">
+      <h2>Steuerung</h2>
+      <div><span class="key">W/S</span> Pitch · <span class="key">A/D</span> Roll · <span class="key">Q/E</span> Rudder/Yaw</div>
+      <div><span class="key">Shift/Ctrl</span> Throttle · <span class="key">F/V</span> Flaps · <span class="key">G</span> Fahrwerk</div>
+      <div><span class="key">B</span> Bremse · <span class="key">T/Y</span> Trim · <span class="key">C</span> Kamera · <span class="key">P</span> Pause · <span class="key">R</span> Reset</div>
+      <button id="hideHelp">Hilfe ausblenden</button>
+    </aside>
+  </div>
+
+  <div id="message" class="overlay">
+    <div class="menu-card result-card">
+      <p class="eyebrow" id="resultEyebrow">Mission beendet</p>
+      <h1 id="messageTitle">Crash</h1>
+      <p id="messageText">Du bist zu hart gelandet.</p>
+      <div id="scorePanel" class="score-panel hidden"></div>
+      <button id="restart">Neu starten</button>
+      <button id="backToMenu" class="ghost">Zum Menü</button>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

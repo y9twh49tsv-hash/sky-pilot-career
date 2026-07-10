@@ -1,0 +1,24 @@
+{
+  "name": "sky-pilot-career",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser-based 3D flight simulator game prototype built with Three.js and Vite.",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "lint": "eslint src --ext .js"
+  },
+  "dependencies": {
+    "@vitejs/plugin-legacy": "latest",
+    "vite": "latest",
+    "three": "latest"
+  },
+  "devDependencies": {
+    "eslint": "latest"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
