@@ -19,7 +19,12 @@ export function createInitialSimState() {
     rpm: 0,
     trim: 0,
     flaps: 0,
+    // Actual surface positions lag the commanded values (transit times).
+    flapsPos: 0,
     gearDown: true,
+    gearPos: 1,
+    // Last raw stick inputs (-1..1), used to animate the control surfaces.
+    controls: { pitch: 0, roll: 0, yaw: 0 },
     brakes: true,
     fuel: 1,
     mass: 1420,
@@ -62,6 +67,7 @@ export function resetSimState(sim, { missionMode = true } = {}) {
     sim.throttle = 0.75;
     sim.rpm = 0.75;
     sim.gearDown = false;
+    sim.gearPos = 0;
     sim.brakes = false;
     sim.onGround = false;
   }

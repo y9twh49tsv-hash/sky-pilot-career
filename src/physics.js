@@ -52,10 +52,17 @@ export function updatePhysics(sim, input, dt, audio) {
   if (input.pressed('KeyY')) sim.trim -= dt * 0.14;
   sim.trim = clamp(sim.trim, -8 * DEG, 8 * DEG);
 
+  // Flaps and gear take time to move; aero forces use the actual positions.
+  sim.flapsPos += clamp(sim.flaps - sim.flapsPos, -9 * dt, 9 * dt);
+  sim.gearPos += clamp((sim.gearDown ? 1 : 0) - sim.gearPos, -dt / 1.4, dt / 1.4);
+
   // --- Attitude control -------------------------------------------------
   const pitchIn = input.axis('KeyS', 'KeyW');
   const rollIn = input.axis('KeyD', 'KeyA');
   const yawIn = input.axis('KeyE', 'KeyQ');
+  sim.controls.pitch = pitchIn;
+  sim.controls.roll = rollIn;
+  sim.controls.yaw = yawIn;
 
   const airVelForAuthority = sim.velocity.clone().sub(sim.wind);
   const speedKtForAuthority = airVelForAuthority.length() * MS_TO_KT;
@@ -91,9 +98,9 @@ export function updatePhysics(sim, input, dt, audio) {
   const dynamic = 0.5 * rho * speed * speed;
 
   // Lift: base camber + AoA slope + flap increment, with post-stall drop-off.
-  const flapCl = sim.flaps / 30 * 0.72;
+  const flapCl = sim.flapsPos / 30 * 0.72;
   let cl = 0.22 + 5.2 * alpha + flapCl;
-  const stallLimit = (15 + sim.flaps * 0.10) * DEG;
+  const stallLimit = (15 + sim.flapsPos * 0.10) * DEG;
   const stallAbs = Math.abs(alpha) > stallLimit;
   if (stallAbs) {
     const drop = clamp(1 - (Math.abs(alpha) - stallLimit) / (23 * DEG), 0.12, 1);
@@ -102,7 +109,7 @@ export function updatePhysics(sim, input, dt, audio) {
   cl = clamp(cl, -1.05, 1.8);
 
   // Drag: parasitic (gear/flaps/wheel brakes add) + induced + sideslip.
-  const cd0 = 0.023 + (sim.gearDown ? 0.024 : 0) + (sim.flaps / 30) * 0.07 + (sim.brakes && sim.onGround ? 0.16 : 0);
+  const cd0 = 0.023 + sim.gearPos * 0.024 + (sim.flapsPos / 30) * 0.07 + (sim.brakes && sim.onGround ? 0.16 : 0);
   const induced = 0.06 * cl * cl;
   const sideDrag = Math.abs(beta) * 0.08;
   const cd = cd0 + induced + sideDrag;
@@ -159,12 +166,12 @@ export function updatePhysics(sim, input, dt, audio) {
         speedKt,
         onRunway,
         bankDeg: Math.abs(sim.roll / DEG),
-        gearDown: sim.gearDown
+        gearDown: sim.gearDown && sim.gearPos > 0.95
       };
       audio?.touchdown(Math.abs(verticalSpeed));
     }
     // Hard landing, banked touchdown, gear up or off-runway = crash.
-    if (!sim.onGround && (Math.abs(verticalSpeed) > 4.6 || Math.abs(sim.roll) > 23 * DEG || !sim.gearDown || !onRunway)) {
+    if (!sim.onGround && (Math.abs(verticalSpeed) > 4.6 || Math.abs(sim.roll) > 23 * DEG || sim.gearPos < 0.95 || !onRunway)) {
       return {
         type: 'crash',
         reason: onRunway ? 'Harte Landung / Fahrwerk prüfen' : 'Geländeberührung außerhalb der Landebahn'

@@ -58,9 +58,9 @@ export class CameraRig {
       posLambda = 30;
       lookLambda = 30;
     } else if (this.mode === 2) {
-      // Wing view from the left wing tip.
-      target.copy(sim.position).add(right.clone().multiplyScalar(-12)).add(up.clone().multiplyScalar(2.6)).add(forward.clone().multiplyScalar(-1.2));
-      look.copy(sim.position).add(forward.clone().multiplyScalar(90));
+      // Side chase: behind-left and above, so the whole aircraft stays visible.
+      target.copy(sim.position).add(right.clone().multiplyScalar(-10)).add(up.clone().multiplyScalar(3)).add(forward.clone().multiplyScalar(-7));
+      look.copy(sim.position).add(forward.clone().multiplyScalar(10));
       posLambda = 14;
       lookLambda = 14;
     } else if (this.mode === 3) {

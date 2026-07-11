@@ -123,8 +123,8 @@ export class GameUI {
     el('rpm').textContent = Math.round(820 + sim.rpm * 2650);
     el('thr').textContent = Math.round(sim.throttle * 100);
     el('fuelFlow').textContent = (1.4 + sim.rpm * 24.0).toFixed(1);
-    el('flaps').textContent = sim.flaps;
-    el('gear').textContent = sim.gearDown ? 'DOWN' : 'UP';
+    el('flaps').textContent = Math.round(sim.flapsPos);
+    el('gear').textContent = sim.gearPos > 0.95 ? 'DOWN' : sim.gearPos < 0.05 ? 'UP' : 'TRANSIT';
     el('brakes').textContent = sim.brakes ? 'ON' : 'OFF';
     el('aoa').textContent = (sim.alpha / DEG).toFixed(1);
     el('gload').textContent = sim.gload.toFixed(1);

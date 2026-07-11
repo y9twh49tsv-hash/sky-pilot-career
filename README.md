@@ -6,7 +6,10 @@ Der Prototyp ist aus der ursprünglichen Einzel-HTML-Demo zu einer echten Projek
 
 ## Features
 
-- Startmenü mit Career Mode, Free Flight, Controls und Settings (Grafikqualität, Sound, Hilfe-Overlay — automatisch gespeichert)
+- Startmenü mit Career Mode, Free Flight, Controls und Settings (Grafikqualität bis **Ultra** für Gaming-PCs, Sound, Hilfe-Overlay — automatisch gespeichert)
+- physikbasierter Himmel (Atmosphären-Streuung) mit Image-Based Lighting, Bloom-Post-Processing auf Hoch/Ultra
+- detailliertes prozedurales Flugzeugmodell: beweglicher Querruder/Höhenruder/Seitenruder, ausfahrende Klappen, animiertes Einziehfahrwerk, 3-Blatt-Propeller mit Blur-Disc
+- Runway mit echten gemalten Markierungen (27/09, Centerline, Aufsetzzone), Stadtviertel mit beleuchteten Fenstern, zwei Baumarten, driftende Wolken, spiegelnder See
 - 3D-Flugzeug mit Tail-Chase-, Cockpit-, Wing-, Tower- und Free-Look-Kamera (Wechsel mit `C`, Tail Chase ist Standard)
 - prozedurales Terrain mit Runway, Taxiway, Apron, Tower, Hangar, Stadt, See, Straßen, Bäumen und Wolken
 - vereinfachte, aber spielbare Flugphysik:

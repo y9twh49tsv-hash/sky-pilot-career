@@ -1,5 +1,10 @@
 import * as THREE from 'three';
-import { createWorld } from './world.js';
+import { Sky } from 'three/addons/objects/Sky.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { createWorld, disposeWorld } from './world.js';
 import { createAircraftModel, updateAircraftVisual } from './aircraft.js';
 import { createInitialSimState, resetSimState } from './state.js';
 import { InputController } from './input.js';
@@ -16,27 +21,48 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
+renderer.toneMappingExposure = 0.8;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x89c8ff);
-scene.fog = new THREE.FogExp2(0x9fd1ff, 0.00017);
+scene.fog = new THREE.FogExp2(0xbcd3e8, 0.00009);
 
-const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.08, 22000);
-const sun = new THREE.DirectionalLight(0xfff5dc, 3.2);
-sun.position.set(-950, 1600, -900);
+const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.08, 30000);
+
+// --- Sun, sky and image-based lighting -------------------------------------
+const SUN_DIR = new THREE.Vector3(-950, 1600, -900).normalize();
+const sun = new THREE.DirectionalLight(0xfff2d8, 3.4);
+sun.position.copy(SUN_DIR).multiplyScalar(2200);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
-sun.shadow.camera.left = -900;
-sun.shadow.camera.right = 900;
-sun.shadow.camera.top = 900;
-sun.shadow.camera.bottom = -900;
 sun.shadow.camera.near = 20;
-sun.shadow.camera.far = 4200;
+sun.shadow.camera.far = 5200;
 scene.add(sun);
-scene.add(new THREE.HemisphereLight(0xbddfff, 0x536341, 1.25));
+scene.add(new THREE.HemisphereLight(0xbdd8f2, 0x50603f, 0.3));
 
-const world = createWorld(scene);
+// Physically based sky (atmospheric scattering shader from three.js addons).
+const sky = new Sky();
+sky.scale.setScalar(24000);
+sky.material.uniforms.turbidity.value = 3;
+sky.material.uniforms.rayleigh.value = 1.1;
+sky.material.uniforms.mieCoefficient.value = 0.004;
+sky.material.uniforms.mieDirectionalG.value = 0.85;
+sky.material.uniforms.sunPosition.value.copy(SUN_DIR);
+
+// Bake the sky into an environment map so all PBR materials get real
+// ambient light and reflections (canopy, water, paint). The sun disc is
+// hidden during the bake (per Sky docs) and the near/far planes must
+// enclose the sky box — the fromScene default of far=100 would miss it
+// entirely and produce a black environment.
+const pmrem = new THREE.PMREMGenerator(renderer);
+const envScene = new THREE.Scene();
+sky.material.uniforms.showSunDisc.value = 0;
+envScene.add(sky);
+scene.environment = pmrem.fromScene(envScene, 0.02, 1, 25000).texture;
+pmrem.dispose();
+sky.material.uniforms.showSunDisc.value = 1;
+scene.add(sky); // moves the sky from envScene into the visible scene
+// The raw sky env is very bright HDR — tame its ambient contribution.
+scene.environmentIntensity = 0.45;
+
 const aircraft = createAircraftModel();
 scene.add(aircraft);
 
@@ -55,19 +81,64 @@ const cameraRig = new CameraRig(camera);
 const ui = new GameUI();
 const audio = new GameAudio();
 
-// Graphics quality: pixel ratio + shadow toggle. Applied on load and when
-// changed in the settings menu (shadow toggle needs materials refreshed).
+// --- Post-processing (bloom) ------------------------------------------------
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.32, 0.5, 0.88);
+composer.addPass(bloomPass);
+composer.addPass(new OutputPass());
+let useComposer = false;
+
+// --- Quality tiers -----------------------------------------------------------
+// low:    no shadows, 1x pixels           — integrated graphics
+// medium: 2048 shadows, 1.5x pixels       — average laptop
+// high:   2048 shadows, native ≤2x, bloom — gaming laptop
+// ultra:  4096 shadows over a wider area, full native pixels, bloom,
+//         much denser world               — desktop GPUs
+const TIERS = {
+  low: { pixelRatio: 1, shadows: false, shadowMap: 1024, shadowSpan: 900, bloom: false },
+  medium: { pixelRatio: 1.5, shadows: true, shadowMap: 2048, shadowSpan: 900, bloom: false },
+  high: { pixelRatio: Math.min(window.devicePixelRatio, 2), shadows: true, shadowMap: 2048, shadowSpan: 1000, bloom: true },
+  ultra: { pixelRatio: window.devicePixelRatio, shadows: true, shadowMap: 4096, shadowSpan: 1600, bloom: true }
+};
+
+let world = null;
+let worldQuality = null;
+
 function applySettings(settings) {
-  const ratios = { low: 1, medium: 1.5, high: Math.min(window.devicePixelRatio, 2.4) };
-  renderer.setPixelRatio(ratios[settings.quality] ?? ratios.high);
+  const tier = TIERS[settings.quality] ?? TIERS.high;
+  renderer.setPixelRatio(tier.pixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
-  const shadows = settings.quality !== 'low';
-  if (renderer.shadowMap.enabled !== shadows) {
-    renderer.shadowMap.enabled = shadows;
+  composer.setPixelRatio(tier.pixelRatio);
+  composer.setSize(window.innerWidth, window.innerHeight);
+  useComposer = tier.bloom;
+
+  if (renderer.shadowMap.enabled !== tier.shadows) {
+    renderer.shadowMap.enabled = tier.shadows;
     scene.traverse((obj) => {
       if (obj.material) obj.material.needsUpdate = true;
     });
   }
+  // Resize the shadow map and the area it covers.
+  if (sun.shadow.mapSize.x !== tier.shadowMap) {
+    sun.shadow.mapSize.set(tier.shadowMap, tier.shadowMap);
+    sun.shadow.map?.dispose();
+    sun.shadow.map = null;
+  }
+  const s = tier.shadowSpan;
+  sun.shadow.camera.left = -s;
+  sun.shadow.camera.right = s;
+  sun.shadow.camera.top = s;
+  sun.shadow.camera.bottom = -s;
+  sun.shadow.camera.updateProjectionMatrix();
+
+  // World density is baked at build time — rebuild when the tier changes.
+  if (worldQuality !== settings.quality) {
+    if (world) disposeWorld(scene, world);
+    world = createWorld(scene, settings.quality);
+    worldQuality = settings.quality;
+  }
+
   audio.setMuted(!settings.sound);
 }
 
@@ -143,17 +214,23 @@ function animate(now) {
   if (missionEvent?.type === 'complete') handleMissionComplete(missionEvent.result);
 
   checkpointRing.rotation.z += dt * 1.6;
-  if (world.userData.beacon) {
+  if (world) {
     world.userData.beacon.material.emissiveIntensity = 1 + Math.max(0, Math.sin(now * 0.004)) * 3;
+    // Clouds drift slowly with the wind.
+    world.userData.clouds.position.x += sim.wind.x * dt * 0.6;
+    world.userData.clouds.position.z += sim.wind.z * dt * 0.6;
+    if (Math.abs(world.userData.clouds.position.x) > 1500) world.userData.clouds.position.x = 0;
   }
   updateAircraftVisual(aircraft, sim, dt);
   cameraRig.update(sim, input, dt);
   ui.updateHud(sim, cameraRig, dt);
-  renderer.render(scene, camera);
+  if (useComposer) composer.render();
+  else renderer.render(scene, camera);
 }
 
 window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
 });
