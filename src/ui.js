@@ -43,19 +43,21 @@ export class GameUI {
     // Settings controls: reflect stored values, persist and apply on change.
     el('setQuality').value = this.settings.quality;
     el('setSound').checked = this.settings.sound;
+    el('setFog').checked = this.settings.fog;
     el('setHelp').checked = this.settings.showHelp;
     const applySettings = () => {
       this.settings = {
         quality: el('setQuality').value,
         sound: el('setSound').checked,
+        fog: el('setFog').checked,
         showHelp: el('setHelp').checked
       };
       saveSettings(this.settings);
       this.onSettingsChange?.(this.settings);
     };
-    el('setQuality').addEventListener('change', applySettings);
-    el('setSound').addEventListener('change', applySettings);
-    el('setHelp').addEventListener('change', applySettings);
+    for (const id of ['setQuality', 'setSound', 'setFog', 'setHelp']) {
+      el(id).addEventListener('change', applySettings);
+    }
   }
 
   showMenuView(viewId) {

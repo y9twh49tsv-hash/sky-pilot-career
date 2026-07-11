@@ -1,9 +1,5 @@
 import * as THREE from 'three';
 import { Sky } from 'three/addons/objects/Sky.js';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { createWorld, disposeWorld } from './world.js';
 import { createAircraftModel, updateAircraftVisual } from './aircraft.js';
 import { createInitialSimState, resetSimState } from './state.js';
@@ -24,7 +20,8 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.8;
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0xbcd3e8, 0.00009);
+const FOG_DENSITY = 0.00009;
+scene.fog = new THREE.FogExp2(0xbcd3e8, FOG_DENSITY);
 
 const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.08, 30000);
 
@@ -81,25 +78,17 @@ const cameraRig = new CameraRig(camera);
 const ui = new GameUI();
 const audio = new GameAudio();
 
-// --- Post-processing (bloom) ------------------------------------------------
-const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
-const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.32, 0.5, 0.88);
-composer.addPass(bloomPass);
-composer.addPass(new OutputPass());
-let useComposer = false;
-
 // --- Quality tiers -----------------------------------------------------------
-// low:    no shadows, 1x pixels           — integrated graphics
-// medium: 2048 shadows, 1.5x pixels       — average laptop
-// high:   2048 shadows, native ≤2x, bloom — gaming laptop
-// ultra:  4096 shadows over a wider area, full native pixels, bloom,
-//         much denser world               — desktop GPUs
+// low:    no shadows, 1x pixels             — integrated graphics
+// medium: 2048 shadows, 1.5x pixels          — average laptop
+// high:   2048 shadows, native pixels ≤2x    — gaming laptop
+// ultra:  4096 shadows over a wider area, full native pixels,
+//         much denser world                  — desktop GPUs
 const TIERS = {
-  low: { pixelRatio: 1, shadows: false, shadowMap: 1024, shadowSpan: 900, bloom: false },
-  medium: { pixelRatio: 1.5, shadows: true, shadowMap: 2048, shadowSpan: 900, bloom: false },
-  high: { pixelRatio: Math.min(window.devicePixelRatio, 2), shadows: true, shadowMap: 2048, shadowSpan: 1000, bloom: true },
-  ultra: { pixelRatio: window.devicePixelRatio, shadows: true, shadowMap: 4096, shadowSpan: 1600, bloom: true }
+  low: { pixelRatio: 1, shadows: false, shadowMap: 1024, shadowSpan: 900 },
+  medium: { pixelRatio: 1.5, shadows: true, shadowMap: 2048, shadowSpan: 900 },
+  high: { pixelRatio: Math.min(window.devicePixelRatio, 2), shadows: true, shadowMap: 2048, shadowSpan: 1000 },
+  ultra: { pixelRatio: window.devicePixelRatio, shadows: true, shadowMap: 4096, shadowSpan: 1600 }
 };
 
 let world = null;
@@ -109,10 +98,6 @@ function applySettings(settings) {
   const tier = TIERS[settings.quality] ?? TIERS.high;
   renderer.setPixelRatio(tier.pixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
-  composer.setPixelRatio(tier.pixelRatio);
-  composer.setSize(window.innerWidth, window.innerHeight);
-  useComposer = tier.bloom;
-
   if (renderer.shadowMap.enabled !== tier.shadows) {
     renderer.shadowMap.enabled = tier.shadows;
     scene.traverse((obj) => {
@@ -138,6 +123,9 @@ function applySettings(settings) {
     world = createWorld(scene, settings.quality);
     worldQuality = settings.quality;
   }
+
+  // Fog off = density 0 (keeping the fog object avoids shader recompiles).
+  scene.fog.density = settings.fog ? FOG_DENSITY : 0;
 
   audio.setMuted(!settings.sound);
 }
@@ -237,13 +225,11 @@ function animate(now) {
     );
     camera.lookAt(sim.position.x, sim.position.y + 1.2, sim.position.z);
   }
-  if (useComposer) composer.render();
-  else renderer.render(scene, camera);
+  renderer.render(scene, camera);
 }
 
 window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
-  composer.setSize(window.innerWidth, window.innerHeight);
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
 });

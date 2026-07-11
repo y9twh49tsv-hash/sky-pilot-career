@@ -12,6 +12,7 @@ const saveDefaults = {
 const settingsDefaults = {
   quality: 'high',
   sound: true,
+  fog: true,
   showHelp: true
 };
 
