@@ -39,19 +39,41 @@ export class GameAudio {
     this.master.gain.value = this.muted ? 0 : 1;
     this.master.connect(ctx.destination);
 
-    this.engineOsc = ctx.createOscillator();
-    this.engineOsc.type = 'sawtooth';
+    // Engine: two slightly detuned saws through a lowpass — reads as a
+    // piston engine instead of a raw buzzer. Filter opens with RPM.
+    this.engineFilter = ctx.createBiquadFilter();
+    this.engineFilter.type = 'lowpass';
+    this.engineFilter.frequency.value = 420;
+    this.engineFilter.Q.value = 0.8;
     this.engineGain = ctx.createGain();
     this.engineGain.gain.value = 0.02;
-    this.engineOsc.connect(this.engineGain).connect(this.master);
+    this.engineFilter.connect(this.engineGain).connect(this.master);
+    this.engineOsc = ctx.createOscillator();
+    this.engineOsc.type = 'sawtooth';
+    this.engineOsc.connect(this.engineFilter);
     this.engineOsc.start();
+    this.engineOsc2 = ctx.createOscillator();
+    this.engineOsc2.type = 'sawtooth';
+    this.engineOsc2.detune.value = 12;
+    this.engineOsc2.connect(this.engineFilter);
+    this.engineOsc2.start();
 
-    this.windOsc = ctx.createOscillator();
-    this.windOsc.type = 'triangle';
+    // Wind: looped white noise through a bandpass that rises with airspeed.
+    const noiseLen = 2 * ctx.sampleRate;
+    const noiseBuf = ctx.createBuffer(1, noiseLen, ctx.sampleRate);
+    const data = noiseBuf.getChannelData(0);
+    for (let i = 0; i < noiseLen; i++) data[i] = Math.random() * 2 - 1;
+    this.windSource = ctx.createBufferSource();
+    this.windSource.buffer = noiseBuf;
+    this.windSource.loop = true;
+    this.windFilter = ctx.createBiquadFilter();
+    this.windFilter.type = 'bandpass';
+    this.windFilter.frequency.value = 300;
+    this.windFilter.Q.value = 0.6;
     this.windGain = ctx.createGain();
     this.windGain.gain.value = 0.0;
-    this.windOsc.connect(this.windGain).connect(this.master);
-    this.windOsc.start();
+    this.windSource.connect(this.windFilter).connect(this.windGain).connect(this.master);
+    this.windSource.start();
 
     this.stallOsc = ctx.createOscillator();
     this.stallOsc.type = 'square';
@@ -66,10 +88,13 @@ export class GameAudio {
   engine(rpm, speedKt) {
     if (!this.ctx || !this.engineOsc) return;
     const t = this.ctx.currentTime;
-    this.engineOsc.frequency.setTargetAtTime(55 + rpm * 145, t, 0.05);
-    this.engineGain.gain.setTargetAtTime(0.015 + rpm * 0.065, t, 0.04);
-    this.windOsc.frequency.setTargetAtTime(120 + speedKt * 2.1, t, 0.06);
-    this.windGain.gain.setTargetAtTime(Math.min(0.04, speedKt / 7000), t, 0.08);
+    const freq = 42 + rpm * 118;
+    this.engineOsc.frequency.setTargetAtTime(freq, t, 0.05);
+    this.engineOsc2.frequency.setTargetAtTime(freq * 2.01, t, 0.05);
+    this.engineFilter.frequency.setTargetAtTime(320 + rpm * 1400, t, 0.06);
+    this.engineGain.gain.setTargetAtTime(0.012 + rpm * 0.075, t, 0.04);
+    this.windFilter.frequency.setTargetAtTime(220 + speedKt * 6, t, 0.1);
+    this.windGain.gain.setTargetAtTime(Math.min(0.09, Math.pow(speedKt / 320, 1.6) * 0.11), t, 0.12);
   }
 
   stall(active) {

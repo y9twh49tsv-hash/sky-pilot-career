@@ -1,6 +1,6 @@
 import { DEG, FT, MS_TO_KT, NM } from './constants.js';
 import { clamp, headingDeg, formatNumber, lerp } from './utils.js';
-import { checkpointDistanceNm, currentCheckpoint, objectiveText } from './missions.js';
+import { checkpointDistanceNm, currentCheckpoint, missionOne, objectiveText } from './missions.js';
 import { loadSave, loadSettings, saveSettings, pilotLevel } from './storage.js';
 
 const el = (id) => document.getElementById(id);
@@ -10,6 +10,9 @@ export class GameUI {
   constructor() {
     this.fpsSmooth = 60;
     this.settings = loadSettings();
+    this.minimap = el('minimap');
+    this.minimapCtx = this.minimap.getContext('2d');
+    this.toastTimer = null;
     this.elements = {
       menu: el('menu'),
       hud: el('hud'),
@@ -158,5 +161,79 @@ export class GameUI {
 
     const cp = currentCheckpoint(sim);
     this.elements.checkpointMarker.style.display = cp ? 'block' : 'none';
+    this.drawMinimap(sim);
+  }
+
+  /** Short auto-hiding notification pill (checkpoint reached, etc.). */
+  showToast(text) {
+    const toast = el('toast');
+    toast.textContent = text;
+    toast.classList.add('show');
+    clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+
+  /** North-up circular minimap: runway, lake, city, checkpoints, aircraft. */
+  drawMinimap(sim) {
+    const c = this.minimapCtx;
+    const scale = 96 / 3200; // ±3.2 km of world on the disc
+    const px = (x) => 100 + x * scale;
+    const py = (z) => 100 + z * scale;
+    c.clearRect(0, 0, 200, 200);
+    c.save();
+    c.beginPath();
+    c.arc(100, 100, 98, 0, Math.PI * 2);
+    c.clip();
+    c.fillStyle = 'rgba(5, 13, 22, 0.78)';
+    c.fillRect(0, 0, 200, 200);
+    // Lake
+    c.fillStyle = 'rgba(52, 120, 168, 0.8)';
+    c.beginPath();
+    c.arc(px(-1450), py(1300), 690 * scale, 0, Math.PI * 2);
+    c.fill();
+    // City
+    c.fillStyle = 'rgba(150, 160, 175, 0.5)';
+    c.fillRect(px(550), py(500), 950 * scale, 950 * scale);
+    // Runway
+    c.fillStyle = '#dfe7ee';
+    c.fillRect(px(-48), py(-1225), 96 * scale, 2450 * scale);
+    // Checkpoints (mission only): done = dim, current = bright ring
+    if (sim.missionMode) {
+      missionOne.checkpoints.forEach((cp, i) => {
+        const done = i < sim.checkpointIndex;
+        const current = i === sim.checkpointIndex;
+        c.beginPath();
+        c.arc(px(cp.position.x), py(cp.position.z), current ? 5 : 3, 0, Math.PI * 2);
+        c.fillStyle = done ? 'rgba(113,255,155,0.45)' : current ? '#ffda79' : 'rgba(255,218,121,0.5)';
+        c.fill();
+        if (current) {
+          c.strokeStyle = '#ffda79';
+          c.lineWidth = 1.5;
+          c.beginPath();
+          c.arc(px(cp.position.x), py(cp.position.z), 8, 0, Math.PI * 2);
+          c.stroke();
+        }
+      });
+    }
+    // Aircraft arrow
+    c.save();
+    c.translate(px(sim.position.x), py(sim.position.z));
+    c.rotate(-sim.yaw);
+    c.fillStyle = '#71ff9b';
+    c.beginPath();
+    c.moveTo(0, -7);
+    c.lineTo(5, 6);
+    c.lineTo(0, 3);
+    c.lineTo(-5, 6);
+    c.closePath();
+    c.fill();
+    c.restore();
+    c.restore();
+    // Bezel
+    c.strokeStyle = 'rgba(255,255,255,0.22)';
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.arc(100, 100, 97, 0, Math.PI * 2);
+    c.stroke();
   }
 }

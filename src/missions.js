@@ -83,5 +83,5 @@ export function objectiveText(sim) {
   if (!sim.missionMode) return 'Erkunde die Insel — R für Neustart';
   const cp = currentCheckpoint(sim);
   if (!cp) return 'Mission complete';
-  return cp.label;
+  return `${cp.label} · ${sim.checkpointIndex + 1}/${missionOne.checkpoints.length}`;
 }

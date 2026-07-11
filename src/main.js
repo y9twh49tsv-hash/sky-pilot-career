@@ -195,6 +195,7 @@ ui.bind({
 applySettings(ui.settings);
 ui.showMenu();
 
+let menuOrbit = 0;
 let last = performance.now();
 function animate(now) {
   requestAnimationFrame(animate);
@@ -210,6 +211,7 @@ function animate(now) {
   if (missionEvent?.type === 'checkpoint') {
     audio.checkpoint();
     placeCheckpointVisual();
+    ui.showToast('Checkpoint erreicht');
   }
   if (missionEvent?.type === 'complete') handleMissionComplete(missionEvent.result);
 
@@ -222,8 +224,19 @@ function animate(now) {
     if (Math.abs(world.userData.clouds.position.x) > 1500) world.userData.clouds.position.x = 0;
   }
   updateAircraftVisual(aircraft, sim, dt);
-  cameraRig.update(sim, input, dt);
-  ui.updateHud(sim, cameraRig, dt);
+  if (sim.running) {
+    cameraRig.update(sim, input, dt);
+    ui.updateHud(sim, cameraRig, dt);
+  } else {
+    // Menu: slow cinematic orbit around the parked aircraft.
+    menuOrbit += dt * 0.1;
+    camera.position.set(
+      sim.position.x + Math.sin(menuOrbit) * 26,
+      sim.position.y + 7,
+      sim.position.z + Math.cos(menuOrbit) * 26
+    );
+    camera.lookAt(sim.position.x, sim.position.y + 1.2, sim.position.z);
+  }
   if (useComposer) composer.render();
   else renderer.render(scene, camera);
 }

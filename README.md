@@ -6,6 +6,7 @@ Der Prototyp ist aus der ursprünglichen Einzel-HTML-Demo zu einer echten Projek
 
 ## Features
 
+- Kino-Startmenü über der Live-3D-Szene (Orbit-Kamera), Minimap im HUD, Checkpoint-Toasts
 - Startmenü mit Career Mode, Free Flight, Controls und Settings (Grafikqualität bis **Ultra** für Gaming-PCs, Sound, Hilfe-Overlay — automatisch gespeichert)
 - physikbasierter Himmel (Atmosphären-Streuung) mit Image-Based Lighting, Bloom-Post-Processing auf Hoch/Ultra
 - detailliertes prozedurales Flugzeugmodell: beweglicher Querruder/Höhenruder/Seitenruder, ausfahrende Klappen, animiertes Einziehfahrwerk, 3-Blatt-Propeller mit Blur-Disc

@@ -85,6 +85,21 @@ export class CameraRig {
     this.position.lerp(target, 1 - Math.exp(-posLambda * dt));
     this.look.lerp(look, 1 - Math.exp(-lookLambda * dt));
     this.camera.position.copy(this.position);
+
+    // Speed feel: the chase view widens its FOV as speed builds.
+    const targetFov = this.mode === 0 ? 70 + clamp((speedKt - 120) / 220, 0, 1) * 14 : 72;
+    if (Math.abs(this.camera.fov - targetFov) > 0.05) {
+      this.camera.fov += (targetFov - this.camera.fov) * (1 - Math.exp(-4 * dt));
+      this.camera.updateProjectionMatrix();
+    }
+
+    // Subtle shake during a stall buffet or a fast ground roll.
+    const shake = (sim.stall ? 0.16 : 0) + (sim.onGround && speedKt > 35 ? Math.min(0.09, speedKt / 900) : 0);
+    if (shake > 0 && this.mode !== 4) {
+      this.camera.position.x += (Math.random() - 0.5) * shake;
+      this.camera.position.y += (Math.random() - 0.5) * shake;
+    }
+
     this.camera.lookAt(this.look);
   }
 }

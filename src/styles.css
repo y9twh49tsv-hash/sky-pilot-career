@@ -30,8 +30,8 @@ button { font: inherit; }
   inset: 0;
   display: none;
   place-items: center;
-  background: radial-gradient(circle at 35% 20%, rgba(47, 143, 255, .22), transparent 35%), rgba(0,0,0,.68);
-  backdrop-filter: blur(8px);
+  background: radial-gradient(circle at 35% 20%, rgba(47, 143, 255, .14), transparent 40%), rgba(2, 8, 18, .38);
+  backdrop-filter: blur(3px);
   z-index: 30;
 }
 .overlay.visible { display: grid; }
@@ -191,6 +191,33 @@ h2 { margin: 0 0 14px; font-size: clamp(26px, 4vw, 42px); letter-spacing: -.04em
 .reticle-dot { position: absolute; width: 10px; height: 10px; left: 50%; top: 50%; transform: translate(-50%, -50%); border: 2px solid var(--hud); border-radius: 999px; box-shadow: 0 0 12px rgba(113,255,155,.8); }
 #attitude { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 300px; height: 300px; border-radius: 999px; border: 1px solid rgba(113,255,155,.18); opacity: .55; overflow: hidden; mix-blend-mode: screen; }
 #horizonLine { position: absolute; width: 420px; height: 2px; background: var(--hud); left: 50%; top: 50%; transform-origin: center center; box-shadow: 0 0 10px rgba(113,255,155,.65); }
+#toast {
+  position: absolute;
+  left: 50%; top: 132px;
+  transform: translate(-50%, -10px);
+  padding: 10px 20px;
+  border-radius: 999px;
+  border: 1px solid rgba(113, 255, 155, .45);
+  background: rgba(3, 22, 12, .8);
+  color: #b8ffd0;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  opacity: 0;
+  transition: opacity .3s ease, transform .3s ease;
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+#minimap {
+  position: absolute;
+  right: 16px;
+  bottom: 116px;
+  width: 168px;
+  height: 168px;
+  filter: drop-shadow(0 8px 24px rgba(0,0,0,.35));
+}
+
 #checkpointMarker {
   position: absolute;
   left: 50%; top: 43%; transform: translate(-50%, -50%);
@@ -217,5 +244,6 @@ h2 { margin: 0 0 14px; font-size: clamp(26px, 4vw, 42px); letter-spacing: -.04em
   #bottomPanel { grid-template-columns: repeat(4, 1fr); }
   #help { display:none; }
   .menu-grid, .score-panel { grid-template-columns: repeat(2, 1fr); }
+  #minimap { display: none; }
   .controls-list { grid-template-columns: 1fr; }
 }
